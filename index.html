@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('1720192306373.jpg');
+            background-size: cover;
+            color: #333;
+        }
+        .container {
+            width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+        .chat {
+            border: 1px solid #000;
+            padding: 10px;
+            margin-top: 10px;
+            height: 100px;
+            overflow-y: auto;
+        }
+        .message {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .avatar {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
+        .username {
+            cursor: pointer;
+            color: blue;
+        }
+        #ticTacToe {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            width: 150px;
+            margin-top: 10px;
+        }
+        .cell {
+            border: 1px solid #000;
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 50px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Welcome to the Web App</h1>
+
+    <div id="auth">
+        <h2 id="authHeader">Login</h2>
+        <label for="authUsername">Username: </label>
+        <input type="text" id="authUsername"><br>
+        <label for="authPassword">Password: </label>
+        <input type="password" id="authPassword"><br>
+        <button id="authButton" onclick="authenticate()">Login</button>
+        <p id="toggleAuth">Don't have an account? <span onclick="toggleAuth()">Sign Up</span></p>
+        <p id="errorMessage" style="color:red;"></p>
+    </div>
+
+    <div id="mainApp" class="hidden">
+        <h2>Welcome, <span id="currentUser"></span>!</h2>
+        <img id="avatar" src="" alt="Avatar" style="width: 50px; height: 50px;"><br>
+        <input type="file" id="avatarUpload" onchange="uploadAvatar()">
+        <button onclick="logout()">Logout</button>
+
+        <h3>Chat</h3>
+        <div class="chat" id="chatBox"></div>
+        <input type="text" id="chatMessage">
+        <button onclick="sendMessage()">Send</button>
+
+        <h3>Tic Tac Toe</h3>
+        <div id="ticTacToe">
+            <div class="cell" onclick="makeMove(0)"></div>
+            <div class="cell" onclick="makeMove(1)"></div>
+            <div class="cell" onclick="makeMove(2)"></div>
+            <div class="cell" onclick="makeMove(3)"></div>
+            <div class="cell" onclick="makeMove(4)"></div>
+            <div class="cell" onclick="makeMove(5)"></div>
+            <div class="cell" onclick="makeMove(6)"></div>
+            <div class="cell" onclick="makeMove(7)"></div>
+            <div class="cell" onclick="makeMove(8)"></div>
+        </div>
+        <button onclick="resetGame()">Reset Game</button>
+        <p id="gameStatus"></p>
+
+        <h3>All Users</h3>
+        <div id="allUsers"></div>
+
+        <h3>About Us</h3>
+        <p>This is a simple web app demonstrating basic functionalities including user authentication, chat, and a game.</p>
+    </div>
+</div>
+
+<script>
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const messages = JSON.parse(localStorage.getItem('messages')) || [];
+    let currentUser = localStorage.getItem('currentUser') || null;
+    let avatars = JSON.parse(localStorage.getItem('avatars')) || {};
+    let gameBoard = ['', '', '', '', '', '', '', '', ''];
+    let currentPlayer = 'X';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (currentUser) {
+            document.getElementById('currentUser').textContent = currentUser;
+            document.getElementById('auth').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            loadMessages();
+            loadUsers();
+            loadAvatar();
+        }
+    });
+
+    function toggleAuth() {
+        const authHeader = document.getElementById('authHeader');
+        const authButton = document.getElementById('authButton');
+        const toggleAuth = document.getElementById('toggleAuth');
+        const errorMessage = document.getElementById('errorMessage');
+        errorMessage.textContent = '';
+
+        if (authHeader.textContent === 'Login') {
+            authHeader.textContent = 'Sign Up';
+            authButton.textContent = 'Sign Up';
+            toggleAuth.innerHTML = 'Already have an account? <span onclick="toggleAuth()">Login</span>';
+        } else {
+            authHeader.textContent = 'Login';
+            authButton.textContent = 'Login';
+            toggleAuth.innerHTML = 'Don\'t have an account? <span onclick="toggleAuth()">Sign Up</span>';
+        }
+    }
+
+    function authenticate() {
+        const username = document.getElementById('authUsername').value;
+        const password = document.getElementById('authPassword').value;
+        const authHeader = document.getElementById('authHeader').textContent;
+        const errorMessage = document.getElementById('errorMessage');
+
+        if (authHeader === 'Login') {
+            const user = users.find(user => user.username === username && user.password === password);
+            if (user) {
+                currentUser = username;
+                localStorage.setItem('currentUser', currentUser);
+                document.getElementById('currentUser').textContent = currentUser;
+                document.getElementById('auth').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                loadMessages();
+                loadUsers();
+                loadAvatar();
+            } else {
+                errorMessage.textContent = 'Invalid credentials or account does not exist.';
+            }
+        } else {
+            if (users.some(user => user.username === username)) {
+                errorMessage.textContent = 'Username already exists.';
+                return;
+            }
+            users.push({ username, password });
+            localStorage.setItem('users', JSON.stringify(users));
+            avatars[username] = '';
+            localStorage.setItem('avatars', JSON.stringify(avatars));
+            errorMessage.textContent = 'Sign up successful. Please login.';
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('currentUser');
+        currentUser = null;
+        document.getElementById('currentUser').textContent = '';
+        document.getElementById('auth').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+    }
+
+    function sendMessage() {
+        const messageText = document.getElementById('chatMessage').value;
+        messages.push({ user: currentUser, text: messageText });
+        localStorage.setItem('messages', JSON.stringify(messages));
+        document.getElementById('chatMessage').value = '';
+        loadMessages();
+    }
+
+    function loadMessages() {
+        const chatBox = document.getElementById('chatBox');
+        chatBox.innerHTML = '';
+        messages.forEach(message => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            const userAvatar = avatars[message.user] || '';
+            messageDiv.innerHTML = `<img src="${userAvatar}" class="avatar" alt="Avatar"> <span class="username" onclick="privateChat('${message.user}')">${message.user}</span>: ${message.text}`;
+            chatBox.appendChild(messageDiv);
+        });
+    }
+
+    function privateChat(username) {
+        alert(`Starting private chat with ${username}`);
+    }
+
+    function loadUsers() {
+        const allUsersDiv = document.getElementById('allUsers');
+        allUsersDiv.innerHTML = '';
+        users.forEach(user => {
+            const userDiv = document.createElement('div');
+            userDiv.textContent = user.username;
+            allUsersDiv.appendChild(userDiv);
+        });
+    }
+
+    function uploadAvatar() {
+        const fileInput = document.getElementById('avatarUpload');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onloadend = () => {
+            avatars[currentUser] = reader.result;
+            localStorage.setItem('avatars', JSON.stringify(avatars));
+            loadAvatar();
+        };
+        
+        if (file) {
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function loadAvatar() {
+        const avatar = avatars[currentUser];
+        if (avatar) {
+            document.getElementById('avatar').src = avatar;
+        } else {
+            document.getElementById('avatar').src = '';
+        }
+    }
+
+    function makeMove(index) {
+        if (gameBoard[index] === '') {
+            gameBoard[index] = currentPlayer;
+            document.querySelectorAll('.cell')[index].textContent = currentPlayer;
+            if (checkWin()) {
+                document.getElementById('gameStatus').textContent = `${currentPlayer} wins!`;
+            } else if (gameBoard.every(cell => cell !== '')) {
+                document.getElementById('gameStatus').textContent = `It's a draw!`;
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            }
+        }
+    }
+
+    function checkWin() {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6] // Diagonals
+        ];
+
+        return winPatterns.some(pattern => {
+            const [a, b, c] = pattern;
+            return gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c];
+        });
+    }
+
+    function resetGame() {
+        gameBoard = ['', '', '', '', '', '', '', '', ''];
+        document.querySelectorAll('.cell').forEach(cell => cell.textContent = '');
+        document.getElementById('gameStatus').textContent = '';
+        currentPlayer = 'X';
+    }
+</script>
+
+</body>
+</html>
